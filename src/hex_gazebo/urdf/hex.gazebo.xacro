@@ -1,0 +1,355 @@
+<?xml version="1.0"?>
+<robot name="hexapod" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    hex.gazebo.xacro
+    Adds Gazebo Sim (gz-sim) + ros2_control + sensor plugins on top of the CAD-accurate
+    model defined in hex_description. Does NOT redefine any link/joint/geometry; it only
+    <xacro:include>s hex_description's robot.xacro (the single model source, as required)
+    and appends <gazebo> tags + a <ros2_control> block that reference those exact link/joint
+    names.
+
+    ASSUMPTION: targets modern Gazebo Sim ("gz-sim" / ros_gz / gz_ros2_control), not Gazebo
+    Classic, since no Gazebo version was specified and Classic is deprecated upstream.
+    TODO: if the target is Gazebo Classic, swap the <plugin> block below for
+    gazebo_ros2_control/GazeboSystem + libgazebo_ros_ros2_control.so and use the classic
+    <sensor> plugin filenames (libgazebo_ros_imu_sensor.so / libgazebo_ros_ray_sensor.so).
+
+    IMU and LiDAR mount poses are NOT part of the supplied CAD data -> placeholder positions
+    on base_link, clearly marked TODO. Update xyz once the real sensor mount points are known.
+  -->
+
+  <xacro:include filename="$(find hex_description)/urdf/robot.xacro"/>
+
+  <!-- ============================ Materials (Gazebo) ============================ -->
+  <!-- NOTE: gz-sim (ogre2) does not resolve legacy Gazebo-Classic material script names
+       (e.g. "Gazebo/Orange"). Colors below are explicit ambient/diffuse, matching the
+       URDF <material> colors defined in materials.xacro so visuals stay consistent
+       between RViz and Gazebo Sim. -->
+  <gazebo reference="base_link">
+    <visual>
+      <material>
+        <ambient>0.30 0.30 0.32 1.0</ambient>
+        <diffuse>0.30 0.30 0.32 1.0</diffuse>
+      </material>
+    </visual>
+  </gazebo>
+
+  <!-- Friction on all leg-tip-bearing links; tibia carries ground contact so gets the
+       highest, most conservative friction to keep footfalls from slipping in Gazebo. -->
+  <xacro:macro name="leg_friction" params="id">
+    <gazebo reference="leg${id}_coxa">
+      <visual>
+        <material>
+          <ambient>1.0 0.55 0.0 1.0</ambient>
+          <diffuse>1.0 0.55 0.0 1.0</diffuse>
+        </material>
+      </visual>
+      <mu1>0.6</mu1>
+      <mu2>0.6</mu2>
+    </gazebo>
+    <gazebo reference="leg${id}_femur">
+      <visual>
+        <material>
+          <ambient>1.0 0.55 0.0 1.0</ambient>
+          <diffuse>1.0 0.55 0.0 1.0</diffuse>
+        </material>
+      </visual>
+      <mu1>0.6</mu1>
+      <mu2>0.6</mu2>
+    </gazebo>
+    <gazebo reference="leg${id}_tibia">
+      <visual>
+        <material>
+          <ambient>0.12 0.12 0.12 1.0</ambient>
+          <diffuse>0.12 0.12 0.12 1.0</diffuse>
+        </material>
+      </visual>
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:leg_friction id="1"/>
+  <xacro:leg_friction id="2"/>
+  <xacro:leg_friction id="3"/>
+  <xacro:leg_friction id="4"/>
+  <xacro:leg_friction id="5"/>
+  <xacro:leg_friction id="6"/>
+
+  <!-- ============================ ros2_control ============================ -->
+  <xacro:macro name="hex_ros2_control_joint" params="name lower upper effort velocity initial_position">
+    <joint name="${name}">
+      <command_interface name="position">
+        <param name="min">${lower}</param>
+        <param name="max">${upper}</param>
+      </command_interface>
+      <state_interface name="position">
+          <param name="initial_value">${initial_position}</param>
+      </state_interface>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </xacro:macro>
+
+  <ros2_control name="hex_hardware" type="system">
+  <hardware>
+    <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+  </hardware>
+
+  <xacro:hex_ros2_control_joint
+    name="leg1_coxa_joint"
+    lower="${coxa_lower}"
+    upper="${coxa_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${leg1_coxa_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg1_femur_joint"
+    lower="${femur_lower}"
+    upper="${femur_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${femur_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg1_tibia_joint"
+    lower="${tibia_lower}"
+    upper="${tibia_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${tibia_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg2_coxa_joint"
+    lower="${coxa_lower}"
+    upper="${coxa_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${leg2_coxa_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg2_femur_joint"
+    lower="${femur_lower}"
+    upper="${femur_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${femur_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg2_tibia_joint"
+    lower="${tibia_lower}"
+    upper="${tibia_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${tibia_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg3_coxa_joint"
+    lower="${coxa_lower}"
+    upper="${coxa_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${leg3_coxa_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg3_femur_joint"
+    lower="${femur_lower}"
+    upper="${femur_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${femur_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg3_tibia_joint"
+    lower="${tibia_lower}"
+    upper="${tibia_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${tibia_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg4_coxa_joint"
+    lower="${coxa_lower}"
+    upper="${coxa_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${leg4_coxa_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg4_femur_joint"
+    lower="${femur_lower}"
+    upper="${femur_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${femur_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg4_tibia_joint"
+    lower="${tibia_lower}"
+    upper="${tibia_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${tibia_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg5_coxa_joint"
+    lower="${coxa_lower}"
+    upper="${coxa_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${leg5_coxa_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg5_femur_joint"
+    lower="${femur_lower}"
+    upper="${femur_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${femur_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg5_tibia_joint"
+    lower="${tibia_lower}"
+    upper="${tibia_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${tibia_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg6_coxa_joint"
+    lower="${coxa_lower}"
+    upper="${coxa_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${leg6_coxa_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg6_femur_joint"
+    lower="${femur_lower}"
+    upper="${femur_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${femur_rest}"/>
+
+  <xacro:hex_ros2_control_joint
+    name="leg6_tibia_joint"
+    lower="${tibia_lower}"
+    upper="${tibia_upper}"
+    effort="${joint_effort}"
+    velocity="${joint_velocity}"
+    initial_position="${tibia_rest}"/>
+
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find hex_gazebo)/config/controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+  <!-- ============================ Odometry (ground truth) ============================
+       This hexapod has no leg/wheel encoders and no IK/gait layer yet, so there is no
+       real proprioceptive odometry source to compute from. Rather than fabricate one,
+       this uses gz-sim's own OdometryPublisher system: a genuine gz-sim system that reads
+       the model's actual simulated pose/twist from the physics engine and publishes it as
+       nav_msgs-compatible ground-truth odometry. This is the standard minimum-correct sim
+       odometry source when no encoder-based odometry exists.
+       NOTE: explicit <odom_topic> below is NOT world/model/link/sensor-scoped by gz-sim -
+       it publishes literally on "/odom", same behavior already confirmed for the IMU/LiDAR
+       <topic> overrides elsewhere in this file. <dimensions>3 gives full 3D pose/twist (the
+       body does move in Z as legs step); EKF fusion downstream reduces to 2D for SLAM.
+       This plugin does not publish TF - robot_localization's EKF is the single authority
+       for the odom->base_footprint transform, to avoid two nodes fighting over one TF edge. -->
+  <gazebo>
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+      <odom_topic>odom</odom_topic>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <dimensions>3</dimensions>
+    </plugin>
+  </gazebo>
+  
+  <!-- ============================ IMU ============================
+       basic simulated IMU, 200 Hz. -->
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0.075" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="imu_link">
+    <sensor name="hex_imu" type="imu">
+      <always_on>true</always_on>
+      <update_rate>200</update_rate>
+      <topic>imu</topic>
+      <gz_frame_id>imu_link</gz_frame_id>
+    </sensor>
+  </gazebo>
+
+  <!-- ============================ LiDAR ============================
+     RPLIDAR A1M8
+
+     Real sensor specifications:
+       - 2D rotating LiDAR
+       - 360 degree horizontal FOV
+       - 0.15 - 12.0 m measurement range
+       - <= 1 degree angular resolution
+       - typical scan rate: 5.5 Hz
+       - sampling frequency: >= 8 kHz
+
+     TEMPORARY MOUNT:
+       Actual CAD mounting position/orientation still needs to be measured.
+       Current position: body-top center.
+       Current orientation: +X = forward.
+     -->
+
+  <link name="lidar_link"/>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.095" rpy="0 0 0"/>
+  </joint>
+
+  <gazebo reference="lidar_link">
+   <sensor name="hex_lidar" type="gpu_lidar">
+    <always_on>true</always_on>
+    <update_rate>5.5</update_rate>
+    <topic>scan</topic>
+    <gz_frame_id>lidar_link</gz_frame_id>
+
+    <lidar>
+
+      <!-- Horizontal 360-degree scan -->
+      <scan>
+        <horizontal>
+          <samples>360</samples>
+          <resolution>1</resolution>
+          <min_angle>-3.14159265</min_angle>
+          <max_angle>3.14159265</max_angle>
+        </horizontal>
+
+        <!-- RPLIDAR A1M8 is a 2D planar LiDAR -->
+        <vertical>
+          <samples>1</samples>
+          <resolution>1</resolution>
+          <min_angle>0</min_angle>
+          <max_angle>0</max_angle>
+        </vertical>
+      </scan>
+
+      <!-- Real A1M8 measurement range -->
+      <range>
+        <min>0.15</min>
+        <max>12.0</max>
+        <resolution>0.01</resolution>
+      </range>
+
+    </lidar>
+
+    </sensor>
+  </gazebo>
+
+</robot>

@@ -1,0 +1,22 @@
+# Single source of truth for hexapod neutral/rest joint positions (radians).
+# Read by:
+#   - hex_description/urdf/mechanical_params.xacro  (-> ros2_control initial_value in hex_gazebo)
+#   - hex_description/launch/display.launch.py      (joint_state_publisher_gui zeros)
+# coxa: per-leg calibration offsets, list order = leg1..leg6.
+# NOTE: this is the mechanical neutral (crouched) pose, NOT a standing pose.
+coxa: [0.384, 0.145, 0.265, 0.265, 0.278, 0.251]
+femur: 0.0
+tibia: 1.200   # 68.75 deg
+
+# Stand pose - same three angles on every leg (user-specified, radians).
+# base_height = height of base_link above the ground at this pose = z offset of
+# base_footprint_joint, so base_footprint sits on the ground when standing.
+# Derived from the lowest vertex of the tibia CAD mesh. The Gazebo tibia collision is a foot
+# sphere at the mesh tip, so Gazebo contact height agrees with it to ~0.5 mm: RViz and
+# Gazebo stand at the same height.
+# Re-run scripts/stand_height.py after changing any angle and paste the result below.
+stand:
+  coxa: 0.145
+  femur: -1.0
+  tibia: -0.881
+  base_height: 0.0651   # m

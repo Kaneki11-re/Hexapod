@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--
+    Reusable hexapod leg macro: base_link -> coxa -> femur -> tibia
+    All per-leg-instance geometry (hip mount xyz/yaw) is passed in; everything else
+    (J2, J3, limits, dynamics, mass, inertia, collision, mesh files) comes from the
+    centralized mechanical_params.xacro properties so every leg is guaranteed identical
+    except for its hip mount transform.
+
+    Joint/link naming convention (shared verbatim by hex_description and hex_gazebo,
+    since hex_gazebo includes this same file; do not rename without updating both
+    ros2_control config and controllers.yaml):
+      links:  leg${id}_coxa, leg${id}_femur, leg${id}_tibia
+      joints: leg${id}_coxa_joint, leg${id}_femur_joint, leg${id}_tibia_joint
+  -->
+  <xacro:macro name="hex_leg" params="id parent xyz yaw">
+
+    <joint name="leg${id}_coxa_joint" type="revolute">
+      <parent link="${parent}"/>
+      <child link="leg${id}_coxa"/>
+      <origin xyz="${xyz}" rpy="0 0 ${yaw}"/>
+      <axis xyz="${coxa_axis}"/>
+      <limit lower="${coxa_lower}" upper="${coxa_upper}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+      <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint>
+
+    <link name="leg${id}_coxa">
+      <visual>
+        <origin xyz="${coxa_mesh_xyz}" rpy="${coxa_mesh_rpy}"/>
+        <geometry>
+          <mesh filename="${mesh_coxa}" scale="${mesh_scale}"/>
+        </geometry>
+        <material name="hex_leg_orange"/>
+      </visual>
+      <collision>
+        <origin xyz="${coxa_col_xyz}" rpy="0 0 0"/>
+        <geometry>
+          <box size="${coxa_col_size}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="${coxa_com_xyz}" rpy="0 0 0"/>
+        <mass value="${coxa_mass}"/>
+        <inertia ixx="${coxa_ixx}" ixy="0.0" ixz="0.0" iyy="${coxa_iyy}" iyz="0.0" izz="${coxa_izz}"/>
+      </inertial>
+    </link>
+
+    <joint name="leg${id}_femur_joint" type="revolute">
+      <parent link="leg${id}_coxa"/>
+      <child link="leg${id}_femur"/>
+      <origin xyz="${j2_xyz}" rpy="${j2_rpy}"/>
+      <axis xyz="${j2_axis}"/>
+      <limit lower="${femur_lower}" upper="${femur_upper}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+      <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint>
+
+    <link name="leg${id}_femur">
+      <visual>
+        <origin xyz="${femur_mesh_xyz}" rpy="${femur_mesh_rpy}"/>
+        <geometry>
+          <mesh filename="${mesh_femur}" scale="${mesh_scale}"/>
+        </geometry>
+        <material name="hex_leg_orange"/>
+      </visual>
+      <collision>
+        <origin xyz="${femur_col_xyz}" rpy="0 0 0"/>
+        <geometry>
+          <box size="${femur_col_size}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="${femur_com_xyz}" rpy="0 0 0"/>
+        <mass value="${femur_mass}"/>
+        <inertia ixx="${femur_ixx}" ixy="0.0" ixz="0.0" iyy="${femur_iyy}" iyz="0.0" izz="${femur_izz}"/>
+      </inertial>
+    </link>
+
+    <joint name="leg${id}_tibia_joint" type="revolute">
+      <parent link="leg${id}_femur"/>
+      <child link="leg${id}_tibia"/>
+      <origin xyz="${j3_xyz}" rpy="${j3_rpy}"/>
+      <axis xyz="${j3_axis}"/>
+      <limit lower="${tibia_lower}" upper="${tibia_upper}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+      <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint>
+
+    <link name="leg${id}_tibia">
+      <visual>
+        <origin xyz="${tibia_mesh_xyz}" rpy="${tibia_mesh_rpy}"/>
+        <geometry>
+          <mesh filename="${mesh_tibia}" scale="${mesh_scale}"/>
+        </geometry>
+        <material name="hex_joint_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="${tibia_foot_xyz}" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${tibia_foot_radius}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="${tibia_com_xyz}" rpy="0 0 0"/>
+        <mass value="${tibia_mass}"/>
+        <inertia ixx="${tibia_ixx}" ixy="0.0" ixz="0.0" iyy="${tibia_iyy}" iyz="0.0" izz="${tibia_izz}"/>
+      </inertial>
+    </link>
+
+  </xacro:macro>
+
+</robot>

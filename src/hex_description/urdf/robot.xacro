@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<robot name="hexapod" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Frame convention: +X forward, +Y left, +Z up. SI units throughout. -->
+
+  <xacro:include filename="$(find hex_description)/urdf/mechanical_params.xacro"/>
+  <xacro:include filename="$(find hex_description)/urdf/materials.xacro"/>
+  <xacro:include filename="$(find hex_description)/urdf/leg.xacro"/>
+
+  <!-- world-anchoring virtual root, harmless for RViz, required by many ros2_control /
+       Gazebo setups to have a fixed frame that is not itself the moving base -->
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <!-- base_footprint = ground projection frame (Nav2 convention). base_link sits
+         stand_height above it, so when the hexapod stands (pose: config/rest_pose.yaml
+         stand.*) base_footprint is on the ground and the body is lifted by stand_height.
+         stand_height = lowest vertex of the tibia CAD mesh at that pose (scripts/
+         stand_height.py). The Gazebo foot-sphere collision touches the floor at the same
+         point (<1 mm), so RViz and Gazebo agree on height. In the crouched rest pose
+         base_footprint is below the ground. -->
+    <origin xyz="0 0 ${stand_height}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="${base_mesh_xyz}" rpy="${base_mesh_rpy}"/>
+      <geometry>
+        <mesh filename="${mesh_base}" scale="${mesh_scale}"/>
+      </geometry>
+      <material name="hex_body_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="${base_col_xyz}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${base_col_size}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="${base_com_xyz}" rpy="0 0 0"/>
+      <mass value="${base_mass}"/>
+      <inertia ixx="${base_ixx}" ixy="0.0" ixz="0.0" iyy="${base_iyy}" iyz="0.0" izz="${base_izz}"/>
+    </inertial>
+  </link>
+
+  <!-- ========================= Six legs ========================= -->
+  <xacro:hex_leg id="1" parent="base_link" xyz="${leg1_xyz}" yaw="${leg1_yaw}"/>
+  <xacro:hex_leg id="2" parent="base_link" xyz="${leg2_xyz}" yaw="${leg2_yaw}"/>
+  <xacro:hex_leg id="3" parent="base_link" xyz="${leg3_xyz}" yaw="${leg3_yaw}"/>
+  <xacro:hex_leg id="4" parent="base_link" xyz="${leg4_xyz}" yaw="${leg4_yaw}"/>
+  <xacro:hex_leg id="5" parent="base_link" xyz="${leg5_xyz}" yaw="${leg5_yaw}"/>
+  <xacro:hex_leg id="6" parent="base_link" xyz="${leg6_xyz}" yaw="${leg6_yaw}"/>
+
+</robot>

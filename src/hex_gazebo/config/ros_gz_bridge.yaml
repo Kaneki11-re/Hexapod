@@ -1,0 +1,37 @@
+# Bridges Gazebo Sim (gz-transport) topics to ROS2.
+# Topic names on the gz side match <topic> in hex.gazebo.xacro sensor blocks; the world
+# name below (hexapod_test) MUST match the <world name="..."> in the loaded world SDF
+# (currently worlds/room.sdf). If you launch with a different --world, update this file.
+# ROOT CAUSE (previously mismatched): hex.gazebo.xacro sets an explicit <topic> on the
+# imu/gpu_lidar sensors ("imu" / "scan"). An explicit sensor <topic> in gz-sim is used
+# verbatim (only normalized to a leading "/") - it is NOT auto-scoped under
+# /world/<world>/model/<model>/link/<link>/sensor/<sensor>/... The sensors were therefore
+# really publishing on the plain gz topics below all along; the bridge was pointed at a
+# scoped path nothing ever published on.
+- ros_topic_name: "imu"
+  gz_topic_name: "/imu"
+  ros_type_name: "sensor_msgs/msg/Imu"
+  gz_type_name: "gz.msgs.IMU"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "scan"
+  gz_topic_name: "/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+
+# Ground-truth odometry from gz-sim's OdometryPublisher system (see hex.gazebo.xacro).
+# Same "explicit <topic> is literal, not scoped" behavior as imu/scan above.
+- ros_topic_name: "odom"
+  gz_topic_name: "/odom"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS
+  
+# Sim clock -> ROS /clock. Required because robot_state_publisher and the bridge itself
+# are launched with use_sim_time:=true; without this, ROS sim time never advances from 0.
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS

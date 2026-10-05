@@ -1,0 +1,93 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    hex_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    hex_position_controller:
+      type: forward_command_controller/ForwardCommandController
+
+joint_state_broadcaster:
+  ros__parameters:
+    joints:
+      - leg1_coxa_joint
+      - leg1_femur_joint
+      - leg1_tibia_joint
+      - leg2_coxa_joint
+      - leg2_femur_joint
+      - leg2_tibia_joint
+      - leg3_coxa_joint
+      - leg3_femur_joint
+      - leg3_tibia_joint
+      - leg4_coxa_joint
+      - leg4_femur_joint
+      - leg4_tibia_joint
+      - leg5_coxa_joint
+      - leg5_femur_joint
+      - leg5_tibia_joint
+      - leg6_coxa_joint
+      - leg6_femur_joint
+      - leg6_tibia_joint
+
+hex_trajectory_controller:
+  ros__parameters:
+    joints:
+      - leg1_coxa_joint
+      - leg1_femur_joint
+      - leg1_tibia_joint
+      - leg2_coxa_joint
+      - leg2_femur_joint
+      - leg2_tibia_joint
+      - leg3_coxa_joint
+      - leg3_femur_joint
+      - leg3_tibia_joint
+      - leg4_coxa_joint
+      - leg4_femur_joint
+      - leg4_tibia_joint
+      - leg5_coxa_joint
+      - leg5_femur_joint
+      - leg5_tibia_joint
+      - leg6_coxa_joint
+      - leg6_femur_joint
+      - leg6_tibia_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: true
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 0.5
+
+# Direct forward-position controller, useful for quick manual testing / calibration
+# alongside the trajectory controller (only one of the two should be spawned+active
+# at a time since both claim the same position command interfaces).
+hex_position_controller:
+  ros__parameters:
+    joints:
+      - leg1_coxa_joint
+      - leg1_femur_joint
+      - leg1_tibia_joint
+      - leg2_coxa_joint
+      - leg2_femur_joint
+      - leg2_tibia_joint
+      - leg3_coxa_joint
+      - leg3_femur_joint
+      - leg3_tibia_joint
+      - leg4_coxa_joint
+      - leg4_femur_joint
+      - leg4_tibia_joint
+      - leg5_coxa_joint
+      - leg5_femur_joint
+      - leg5_tibia_joint
+      - leg6_coxa_joint
+      - leg6_femur_joint
+      - leg6_tibia_joint
+    interface_name: position

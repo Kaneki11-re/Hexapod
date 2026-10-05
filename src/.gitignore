@@ -1,0 +1,5 @@
+# ignore in-progress packages
+hex_gait/
+hex_teleop/
+hex_ik/
+hex_msgs/

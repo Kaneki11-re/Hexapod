@@ -1,0 +1,212 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    mechanical_params.xacro
+    Single source of truth for every CAD-derived number used by leg.xacro / robot.xacro.
+    Units: meters, radians, kg, SI. Frame convention: +X forward, +Y left, +Z up.
+
+    PROVENANCE NOTES (do not silently "fix" these without re-checking CAD):
+    - J1 (base->coxa) xyz/yaw: given directly by user as base_link-frame values (base_link is
+      the root link, so these are used as-is; NOT re-derived).
+    - J1 rotation axis: NOT provided by user. ASSUMED (0,0,1) (vertical yaw axis), matching
+      standard hexapod coxa-yaw convention and the fact only a "yaw" angle was given per leg.
+      TODO: confirm against CAD joint definition; edit coxa_axis below if wrong.
+    - J1 roll/pitch: NOT provided. ASSUMED 0/0 (mount face normal to Z). TODO: confirm.
+    - J2 (coxa->femur) and J3 (femur->tibia) xyz/rpy/axis: given by user as small-magnitude
+      per-joint offsets, ASSUMED already expressed in the parent link's local frame (coxa and
+      femur respectively), distinct from J1 which was given in the base/global frame. This
+      matches typical Fusion360 "joint origin" export convention. TODO: re-verify against CAD
+      if legs do not visually align in RViz.
+    - Tibia mesh origin z offset: given explicitly by user; applied to visual AND collision
+      AND folded into the tibia link's center-of-mass, since STL vertices are exported in the
+      tibia's own local frame, offset from the femur-tibia joint origin by this amount.
+    - base_link / coxa / femur mesh origins: NOT given an explicit offset by user, so ASSUMED
+      to coincide with each link's joint frame (mesh origin xyz=0 rpy=0), consistent with a
+      per-part Fusion360 export at the component's local origin. TODO: confirm against CAD.
+    - Per-link mass and inertia: NOT provided by CAD. Derived here (see comments below) from
+      real mesh volumes (computed from the STL triangle data via divergence theorem) scaled to
+      match the user's total measured robot mass (~2.3 kg) and PLA structure assumption, plus
+      lumped servo masses. Marked TODO: replace with actual CAD mass properties when available.
+  -->
+
+  <!-- ============================ Mesh files ============================ -->
+  <xacro:property name="mesh_base"  value="package://hex_description/meshes/base_link.stl"/>
+  <xacro:property name="mesh_coxa"  value="package://hex_description/meshes/coxa.stl"/>
+  <xacro:property name="mesh_femur" value="package://hex_description/meshes/femur.stl"/>
+  <xacro:property name="mesh_tibia" value="package://hex_description/meshes/tibia.stl"/>
+  <!-- STL exported in millimeters -> scale to meters -->
+  <xacro:property name="mesh_scale" value="0.001 0.001 0.001"/>
+
+  <!-- ==================== Mesh-local origin corrections ==================== -->
+  <!-- Applied to <visual>/<collision> mesh placement inside each link frame. -->
+  <xacro:property name="base_mesh_xyz"  value="0 0 0"/>
+  <xacro:property name="base_mesh_rpy"  value="0 0 0"/>
+  <xacro:property name="coxa_mesh_xyz"  value="0 0 0"/>
+  <xacro:property name="coxa_mesh_rpy"  value="0 0 0"/>
+  <xacro:property name="femur_mesh_xyz" value="0.047 0.025 -0.009"/>
+  <xacro:property name="femur_mesh_rpy" value="0 0 0"/>
+  <!-- Given explicitly by user -->
+  <xacro:property name="tibia_mesh_xyz"
+                value="-0.043267396 0.000332156 -0.083000000"/>
+  <xacro:property name="tibia_mesh_rpy" value="0 0 3.1415926536"/>
+
+  <!-- ======================== Hip (J1) mount points ========================
+     Positions are the coxa servo output-shaft centers in the base_link frame.
+     L1 CAD shaft position:
+       X = 99.926 mm
+       Y = 58.651 mm
+     Remaining positions calculated from the 60-degree hexapod symmetry.
+     Z retained from the existing base/CAD alignment.
+============================================================================ -->
+
+<xacro:property name="leg1_xyz" value="0.099926 0.058651 0.020825620688"/>
+<xacro:property name="leg2_xyz" value="0.100756256 -0.057212955 0.020825620688"/>
+<xacro:property name="leg3_xyz" value="0.000830256 -0.115863954 0.020825620688"/>
+<xacro:property name="leg4_xyz" value="-0.099926 -0.058651 0.020825620688"/>
+<xacro:property name="leg5_xyz" value="-0.100756256 0.057212955 0.020825620688"/>
+<xacro:property name="leg6_xyz" value="-0.000830256 0.115863954 0.020825620688"/>
+
+
+<!-- ======================== Coxa orientations ======================== -->
+
+<xacro:property name="leg1_yaw" value="0.268928027593"/>
+<xacro:property name="leg2_yaw" value="-0.778269131208"/>
+<xacro:property name="leg3_yaw" value="-1.825466290009"/>
+<xacro:property name="leg4_yaw" value="-2.872663448809"/>
+<xacro:property name="leg5_yaw" value="-3.919860607608"/>
+<xacro:property name="leg6_yaw" value="-4.967057766407"/>
+
+
+<!-- J1 rotation axis: vertical -->
+<xacro:property name="coxa_axis" value="0 0 1"/>
+
+  <!-- ===================== J2 (coxa -> femur), identical per leg ===================== -->
+  <xacro:property name="j2_xyz"  value="0.0385 -0.03 -0.011"/>
+  <xacro:property name="j2_rpy"  value="0 0 0"/>
+  <xacro:property name="j2_axis" value="0 1 0"/>
+
+  <!-- ===================== J3 (femur -> tibia), identical per leg ===================== -->
+  <xacro:property name="j3_xyz"  value="0.0865 0.033 0"/>
+  <xacro:property name="j3_rpy"  value="0 0 3.14159265"/>
+  <xacro:property name="j3_axis" value="0 1 0"/>
+
+
+<!-- ============================================================
+     Hexapod neutral / rest joint positions
+     SINGLE SOURCE: config/rest_pose.yaml (radians). Also read by display.launch.py
+     (joint_state_publisher_gui zeros) - do NOT hardcode these values anywhere else.
+     coxa list order = leg1..leg6.
+     ============================================================ -->
+<xacro:property name="rest_pose" value="${xacro.load_yaml('$(find hex_description)/config/rest_pose.yaml')}"/>
+
+<xacro:property name="leg1_coxa_rest" value="${rest_pose['coxa'][0]}"/>
+<xacro:property name="leg2_coxa_rest" value="${rest_pose['coxa'][1]}"/>
+<xacro:property name="leg3_coxa_rest" value="${rest_pose['coxa'][2]}"/>
+<xacro:property name="leg4_coxa_rest" value="${rest_pose['coxa'][3]}"/>
+<xacro:property name="leg5_coxa_rest" value="${rest_pose['coxa'][4]}"/>
+<xacro:property name="leg6_coxa_rest" value="${rest_pose['coxa'][5]}"/>
+<xacro:property name="femur_rest"     value="${rest_pose['femur']}"/>
+<xacro:property name="tibia_rest"     value="${rest_pose['tibia']}"/>
+
+<!-- Height of base_link above ground at the stand pose (rest_pose.yaml: stand.*), from the
+     tibia CAD mesh tip. Used as the z offset of base_footprint_joint in robot.xacro.
+     Derived by scripts/stand_height.py - re-run it if the stand pose or geometry changes. -->
+<xacro:property name="stand_height" value="${rest_pose['stand']['base_height']}"/>
+
+<!-- Gazebo initial joint positions = STAND pose (same on every leg), so the hexapod spawns
+     standing on its legs. To spawn crouched instead, point these at the rest values
+     (leg*_coxa_rest, femur_rest, tibia_rest). -->
+<xacro:property name="coxa_init"  value="${rest_pose['stand']['coxa']}"/>
+<xacro:property name="femur_init" value="${rest_pose['stand']['femur']}"/>
+<xacro:property name="tibia_init" value="${rest_pose['stand']['tibia']}"/>
+
+  <!-- ============================ Joint limits ============================ -->
+
+  <!-- Coxa joint:  -55° to +55°    -->
+  <xacro:property name="coxa_lower" value="-0.96"/>  <!-- -55° -->
+  <xacro:property name="coxa_upper" value="0.96"/>   <!-- +55° -->
+
+  <!-- Femur joint: -90° to +10°    -->
+  <xacro:property name="femur_lower" value="-1.5707963268"/> <!-- -90° -->
+  <xacro:property name="femur_upper" value="0.1745329252"/>  <!-- +10° -->
+  <xacro:property name="femur_rest"  value="0.0"/>            <!-- 0° -->
+
+  <!-- Tibia joint: -90° to +153.8° -->
+  <xacro:property name="tibia_lower" value="-1.5707963268"/> <!-- -90° -->
+  <xacro:property name="tibia_upper" value="2.683"/>  <!-- +153.8° -->
+  <xacro:property name="tibia_rest"  value="1.200"/>   <!-- +68.75° -->
+
+ 
+  <!-- ============================ Actuator / dynamics ============================ -->
+  <xacro:property name="joint_effort"   value="1.08"/>   <!-- N*m -->
+  <xacro:property name="joint_velocity" value="4.36"/>   <!-- rad/s -->
+  <xacro:property name="joint_damping"  value="0.05"/>   <!-- N*m/(rad/s) -->
+  <xacro:property name="joint_friction" value="0.02"/>   <!-- N -->
+
+  <!-- ============================ Mass properties ============================
+       Approximate CAD-based physical model.
+
+       Assumptions:
+         - Physical robot mass: ~2.30 kg
+         - 18 × MG996R servos at ~0.055 kg each
+         - Remaining mass assigned to PLA printed structure
+         - Effective printed-part density adjusted to match the measured
+           total robot mass
+         - COM and inertia values are approximate and intended for Gazebo
+           simulation, IK/gait development, and navigation testing
+         - Inertia values are diagonal approximations about the link COM
+       -->
+  <!-- Link masses [kg] -->
+  <xacro:property name="base_mass"  value="0.279078"/>
+  <xacro:property name="coxa_mass"  value="0.102852"/>
+  <xacro:property name="femur_mass" value="0.115539"/>
+  <xacro:property name="tibia_mass" value="0.118425"/>
+
+  <!-- Link-frame center-of-mass (mesh COM + mesh-origin correction where applicable) -->
+  <xacro:property name="base_com_xyz"  value="-0.000396 0.0000000 0.022164"/>
+  <xacro:property name="coxa_com_xyz"  value="0.032170 -0.001789 -0.000199"/>
+  <xacro:property name="femur_com_xyz" value="0.016766 0.005836 0.010045"/>
+  <xacro:property name="tibia_com_xyz" value="-0.014127 -0.000284 -0.068819"/>
+
+  <!-- Box-approximation inertia, computed from STL bbox dims + mass above.
+       Split into individual scalar properties (rather than a packed string) so xacro
+       expression evaluation stays simple and robust. -->
+  <xacro:property name="base_ixx"  value="0.0021629688"/>
+  <xacro:property name="base_iyy"  value="0.0020808110"/>
+  <xacro:property name="base_izz"  value="0.0038865922"/>
+
+  <xacro:property name="coxa_ixx"  value="0.0000496400"/>
+  <xacro:property name="coxa_iyy"  value="0.0000591121"/>
+  <xacro:property name="coxa_izz"  value="0.0000498681"/>
+
+  <xacro:property name="femur_ixx" value="0.0000445906"/>
+  <xacro:property name="femur_iyy" value="0.0001314113"/>
+  <xacro:property name="femur_izz" value="0.0001611703"/>
+
+  <xacro:property name="tibia_ixx" value="0.0003036460"/>
+  <xacro:property name="tibia_iyy" value="0.0003204487"/>
+  <xacro:property name="tibia_izz" value="0.0000841107"/> 
+
+  <!-- ============================ Collision primitives ============================
+       Simple boxes sized to each STL's bounding box (mm->m), positioned at the bbox center
+       in the LINK frame, for base/coxa/femur. Tibia uses a foot sphere (see below). -->
+  <xacro:property name="base_col_size"  value="0.24477 0.25000 0.07500"/>
+  <xacro:property name="base_col_xyz"   value="-0.000396 0.0 0.037500"/>
+
+  <xacro:property name="coxa_col_size"  value="0.060232 0.049696 0.060000"/>
+  <xacro:property name="coxa_col_xyz"   value="0.017994 -0.005718 0.0"/>
+
+  <xacro:property name="femur_col_size" value="0.116538 0.063810 0.028500"/>
+  <xacro:property name="femur_col_xyz"  value="0.000268 0.004360 0.010000"/>
+
+  <!-- Tibia collision = FOOT SPHERE (was a bbox box, size 0.073467 0.060000 0.169945 at
+       -0.021741 0.0 -0.084972, whose lowest corner sat ~2.3 cm below the CAD tip at the
+       stand pose, so Gazebo and RViz disagreed on height). The sphere is centred so its
+       surface touches the tibia mesh tip (centroid of the lowest 1 mm of mesh vertices,
+       link frame -0.0498 0.0003 -0.1543) along the tibia axis; radius ~ half the tip width.
+       Ground contact in Gazebo therefore matches the CAD tip to <1 mm at the stand pose.
+       Other tibia geometry no longer collides (only foot-ground contact is modelled). -->
+  <xacro:property name="tibia_foot_radius" value="0.0100"/>
+  <xacro:property name="tibia_foot_xyz"    value="-0.0467 0.0003 -0.1447"/>
+
+</robot>
